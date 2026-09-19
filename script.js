@@ -3,6 +3,10 @@
  * MemoryMind — lógica del juego de memoria (matching).
  */
 
+// ============================================================
+// 1. CONFIGURACIÓN Y CONSTANTES
+// ============================================================
+
 const STORAGE_KEY = 'memorymind_scores';
 const DOG_API_URL = 'https://dog.ceo/api/breeds/image/random';
 const API_TIMEOUT_MS = 8000;
@@ -33,7 +37,9 @@ let state = {
 // valor antes de tocar el estado, para no "resucitar" una partida vieja.
 let activeGameToken = 0;
 
-// ---------- localStorage ----------
+// ============================================================
+// 2. PERSISTENCIA — localStorage
+// ============================================================
 
 function getScores() {
   try {
@@ -59,7 +65,9 @@ function bestScoreFor(difficulty) {
   return scores.length ? Math.max(...scores.map(s => s.score)) : 0;
 }
 
-// ---------- Utilidades ----------
+// ============================================================
+// 3. UTILIDADES GENERALES
+// ============================================================
 
 function shuffle(array) {
   const arr = [...array];
@@ -95,8 +103,15 @@ function withTimeout(promise, ms) {
   ]);
 }
 
-// ---------- Integración con Dog CEO API ----------
+// ============================================================
+// 4. INTEGRACIÓN CON DOG CEO API
+// ============================================================
 
+// Pide a la API de Dog CEO tantas imágenes únicas como pares necesite el
+// nivel (6/8/10), en rondas de peticiones en paralelo. Usa Promise.allSettled
+// en vez de Promise.all: si UNA petición del lote falla (timeout puntual,
+// hiccup de red), las demás del mismo lote se siguen aprovechando en vez de
+// tirar todo el lote a la basura y caer al modo emojis sin necesidad.
 async function fetchUniqueDogImages(count) {
   const urls = new Set();
   let rounds = 0;
@@ -133,7 +148,9 @@ async function fetchUniqueDogImages(count) {
   return [...urls].slice(0, count);
 }
 
-// ---------- Menú: selección de dificultad ----------
+// ============================================================
+// 5. MENÚ Y SELECCIÓN DE DIFICULTAD
+// ============================================================
 
 function setupDifficultySelection() {
   const buttons = document.querySelectorAll('.difficulty-card');
@@ -151,7 +168,9 @@ function setupDifficultySelection() {
   playBtn.addEventListener('click', () => startGame(state.difficulty));
 }
 
-// ---------- Tablero: construcción ----------
+// ============================================================
+// 6. TABLERO — construcción y renderizado
+// ============================================================
 
 function buildBoard(cardValues) {
   const deck = shuffle([...cardValues, ...cardValues]).map((card, index) => ({
@@ -202,8 +221,14 @@ function updateStatsBar() {
   document.getElementById('movesValue').textContent = state.moves;
 }
 
-// ---------- Lógica del juego ----------
+// ============================================================
+// 7. LÓGICA DEL JUEGO
+// ============================================================
 
+// Arranca una partida: muestra la pantalla de carga, pide imágenes a la API
+// (o cae a emojis si falla), arma el tablero y prende el cronómetro. Toma un
+// activeGameToken propio para poder abortar sin efectos si el usuario navega
+// fuera (menú) o arranca otra partida antes de que la API responda.
 async function startGame(difficulty) {
   const token = ++activeGameToken;
   clearInterval(state.timerId);
@@ -282,6 +307,11 @@ function handleCardClick(cardId) {
   }
 }
 
+// Compara las 2 cartas volteadas: si coinciden quedan "matched" para siempre
+// y suman puntos; si no, se marcan "mismatch" (dispara el shake en CSS) y se
+// voltean de regreso tras 1s. Ambos setTimeout comparan su token contra
+// activeGameToken para no tocar el estado si ya se salió al menú o empezó
+// otra partida mientras esperaban.
 function checkMatch() {
   const [first, second] = state.flipped;
   const token = activeGameToken;
@@ -357,7 +387,9 @@ function endGame(won) {
   showScreen('resultScreen');
 }
 
-// ---------- Scoreboard (menú) ----------
+// ============================================================
+// 8. SCOREBOARD (menú y sidebar)
+// ============================================================
 
 function renderScoreboard() {
   const scores = getScores();
@@ -396,7 +428,9 @@ function renderSidebarScores() {
   `).join('');
 }
 
-// ---------- Navegación ----------
+// ============================================================
+// 9. NAVEGACIÓN
+// ============================================================
 
 function goToMenu() {
   activeGameToken++; // invalida cualquier startGame/checkMatch pendiente de la partida anterior
@@ -407,7 +441,9 @@ function goToMenu() {
   showScreen('menuScreen');
 }
 
-// ---------- Event listeners globales ----------
+// ============================================================
+// 10. EVENT LISTENERS E INICIALIZACIÓN
+// ============================================================
 
 function setupEventListeners() {
   document.getElementById('boardGrid').addEventListener('click', (e) => {
@@ -424,8 +460,6 @@ function setupEventListeners() {
     goToMenu();
   });
 }
-
-// ---------- Inicialización ----------
 
 function init() {
   setupDifficultySelection();

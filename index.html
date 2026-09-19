@@ -1,6 +1,10 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
+  <!-- ============================================================
+       HEAD — metadatos y CDNs (Bootstrap 5, Bootstrap Icons, Google
+       Fonts). Sin build step: todo se carga directo desde CDN.
+       ============================================================ -->
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>MemoryMind — Juego de Memoria</title>
@@ -13,7 +17,10 @@
 </head>
 <body>
 
-  <!-- ===== HEADER ===== -->
+  <!-- ============================================================
+       HEADER — logo, y stats bar (puntos, timer, movimientos, pill
+       de "Modo símbolos") que solo se muestra durante la partida.
+       ============================================================ -->
   <header class="game-header">
     <div class="container-fluid px-3 px-lg-4 py-2">
       <div class="d-flex flex-wrap align-items-center justify-content-between gap-2">
@@ -32,7 +39,10 @@
 
   <main class="container-fluid px-3 px-lg-4 py-3 py-lg-4">
 
-    <!-- ===== PANTALLA: MENÚ PRINCIPAL ===== -->
+    <!-- ============================================================
+         PANTALLA: MENÚ PRINCIPAL — selección de dificultad, botón
+         "Jugar" y tabla de mejores puntuaciones (localStorage).
+         ============================================================ -->
     <section id="menuScreen" class="app-screen">
       <div class="row justify-content-center">
         <div class="col-12 col-lg-10 col-xl-8">
@@ -97,7 +107,11 @@
       </div>
     </section>
 
-    <!-- ===== PANTALLA: CARGA (fetch a la API) ===== -->
+    <!-- ============================================================
+         PANTALLA: CARGA — se muestra mientras fetchUniqueDogImages()
+         pide las imágenes a la API de Dog CEO antes de armar el
+         tablero. Ver script.js sección 4.
+         ============================================================ -->
     <section id="loadingScreen" class="app-screen d-none">
       <div class="text-center py-5">
         <div class="spinner-border loading-spinner" role="status">
@@ -107,11 +121,14 @@
       </div>
     </section>
 
-    <!-- ===== PANTALLA: JUEGO ===== -->
+    <!-- ============================================================
+         PANTALLA: JUEGO — sidebar (nivel actual + top 5 puntuaciones,
+         solo visible en desktop) y el tablero de cartas.
+         ============================================================ -->
     <section id="gameScreen" class="app-screen d-none">
       <div class="row g-4">
 
-        <!-- Sidebar (visible en desktop) -->
+        <!-- Sidebar: solo visible en desktop (d-lg-block) -->
         <aside class="col-lg-3 d-none d-lg-block">
           <div class="sidebar-panel mb-3">
             <h2 class="panel-title-sm"><i class="bi bi-sliders me-2"></i>Nivel actual</h2>
@@ -128,7 +145,9 @@
           </div>
         </aside>
 
-        <!-- Tablero -->
+        <!-- Tablero: la etiqueta de nivel + botón "Cambiar nivel" se
+             repite aquí (visible solo en mobile/tablet, d-lg-none)
+             porque el sidebar de arriba está oculto en esos anchos. -->
         <div class="col-lg-9">
           <div class="d-flex d-lg-none justify-content-between align-items-center mb-3">
             <span class="current-difficulty-mobile" id="currentDifficultyLabelMobile">Fácil</span>
@@ -146,7 +165,10 @@
       </div>
     </section>
 
-    <!-- ===== PANTALLA: RESULTADO ===== -->
+    <!-- ============================================================
+         PANTALLA: RESULTADO — puntos/movimientos/tiempo finales,
+         mejor récord del nivel, y botones "Reiniciar" / "Menú".
+         ============================================================ -->
     <section id="resultScreen" class="app-screen d-none">
       <div class="row justify-content-center">
         <div class="col-12 col-md-8 col-lg-6">
@@ -187,7 +209,10 @@
 
   </main>
 
-  <!-- ===== TOAST DE AVISO (fallback de API) ===== -->
+  <!-- ============================================================
+       TOAST DE AVISO — solo aparece cuando falla la API de Dog CEO
+       y el juego cae al modo emojis (ver script.js, showToast()).
+       ============================================================ -->
   <div class="toast-container position-fixed bottom-0 end-0 p-3">
     <div id="apiToast" class="toast align-items-center border-0" role="alert" aria-live="assertive" aria-atomic="true">
       <div class="d-flex">
@@ -197,12 +222,20 @@
     </div>
   </div>
 
+  <!-- ============================================================
+       FOOTER
+       ============================================================ -->
   <footer class="footer mt-4">
     <div class="container-fluid px-3 px-lg-4 py-3 text-center">
       <p class="mb-0 footer-note">MemoryMind — Juego de memoria hecho con HTML, CSS, JS y Bootstrap.</p>
     </div>
   </footer>
 
+  <!-- ============================================================
+       SCRIPTS — Bootstrap Bundle (JS) por CDN, luego nuestra lógica.
+       Debe ir en este orden: script.js usa el objeto global
+       `bootstrap` (Toast) que expone el bundle.
+       ============================================================ -->
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
   <script src="script.js"></script>
 </body>

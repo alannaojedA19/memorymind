@@ -3,6 +3,10 @@
    Paleta: púrpura #6F42C1 (primario) / amarillo #FFC107 (acento)
    ========================================================================== */
 
+/* ============================================================
+   1. VARIABLES Y RESET
+   ============================================================ */
+
 :root {
   --color-primary: #6F42C1;
   --color-primary-dark: #52309166;
@@ -26,18 +30,26 @@ body {
   background: linear-gradient(160deg, var(--color-bg-start) 0%, var(--color-bg-end) 60%);
 }
 
+/* Foco visible para navegación por teclado (afecta a toda la app). */
+a:focus-visible, button:focus-visible, .board-card:focus-visible {
+  outline: 3px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
+/* ============================================================
+   2. TIPOGRAFÍA GENERAL
+   ============================================================ */
+
 h1, h2, .brand, .difficulty-name, .result-title {
   font-family: 'Poppins', 'Inter', sans-serif;
 }
 
 .text-accent { color: var(--color-accent) !important; }
 
-a:focus-visible, button:focus-visible, .board-card:focus-visible {
-  outline: 3px solid var(--color-accent);
-  outline-offset: 2px;
-}
+/* ============================================================
+   3. HEADER / STATS BAR
+   ============================================================ */
 
-/* ===== HEADER ===== */
 .game-header {
   background: linear-gradient(180deg, #1c1033 0%, var(--color-surface) 100%);
   border-bottom: 1px solid var(--color-border);
@@ -71,30 +83,19 @@ a:focus-visible, button:focus-visible, .board-card:focus-visible {
 .stat-pill .bi-trophy-fill { color: var(--color-accent); }
 .stat-pill .bi-stopwatch-fill { color: #ff7676; }
 
+/* Variante de aviso (pill "Modo símbolos" cuando falla la API de imágenes).
+   Debe ir DESPUÉS de .stat-pill en el archivo: ambas fijan border-color/color
+   con la misma especificidad, y aquí necesitamos que gane esta. */
 .stat-pill-warning {
   border-color: var(--color-accent);
   color: var(--color-accent);
 }
 
-/* ===== LOADING SCREEN (fetch a la API) ===== */
-.loading-spinner {
-  width: 3rem;
-  height: 3rem;
-  color: var(--color-accent);
-}
+/* ============================================================
+   4. PANTALLA DE MENÚ
+   (hero, tarjetas de dificultad, botón jugar, scoreboard)
+   ============================================================ */
 
-.loading-text {
-  color: var(--color-text-muted);
-}
-
-/* ===== TOAST ===== */
-.toast {
-  background-color: var(--color-surface-light);
-  color: var(--color-text);
-  border-left: 4px solid var(--color-accent);
-}
-
-/* ===== HERO / MENU ===== */
 .hero-title {
   font-weight: 700;
   font-size: clamp(1.7rem, 4vw, 2.5rem);
@@ -147,6 +148,9 @@ a:focus-visible, button:focus-visible, .board-card:focus-visible {
   font-size: .82rem;
 }
 
+/* Botones compartidos: .btn-play también se usa en "Reiniciar" (pantalla de
+   resultado) y .btn-outline-brand en "Cambiar nivel" (juego) y "Menú"
+   (resultado), no son exclusivos de esta pantalla. */
 .btn-play {
   background-color: var(--color-accent);
   border-color: var(--color-accent);
@@ -180,7 +184,8 @@ a:focus-visible, button:focus-visible, .board-card:focus-visible {
   color: #241640;
 }
 
-/* ===== SCOREBOARD (menú) ===== */
+/* Caja de "tarjeta" reutilizada por el scoreboard del menú, el sidebar del
+   juego (.sidebar-panel) y la pantalla de resultado (.result-panel). */
 .scoreboard-panel,
 .sidebar-panel,
 .result-panel {
@@ -194,12 +199,6 @@ a:focus-visible, button:focus-visible, .board-card:focus-visible {
   font-size: 1.1rem;
   font-weight: 600;
   margin-bottom: 1rem;
-}
-
-.panel-title-sm {
-  font-size: .95rem;
-  font-weight: 600;
-  margin-bottom: .75rem;
 }
 
 .scoreboard-table {
@@ -243,7 +242,31 @@ a:focus-visible, button:focus-visible, .board-card:focus-visible {
 .badge-level.medium { background-color: rgba(255, 193, 7, .18); color: var(--color-accent); }
 .badge-level.hard { background-color: rgba(233, 30, 99, .18); color: #ff5f8f; }
 
-/* ===== SIDEBAR (desktop) ===== */
+/* ============================================================
+   5. PANTALLA DE CARGA (spinner mientras se pide la API)
+   ============================================================ */
+
+.loading-spinner {
+  width: 3rem;
+  height: 3rem;
+  color: var(--color-accent);
+}
+
+.loading-text {
+  color: var(--color-text-muted);
+}
+
+/* ============================================================
+   6. PANTALLA DE JUEGO
+   (sidebar, tablero, cartas, flip 3D, mismatch)
+   ============================================================ */
+
+.panel-title-sm {
+  font-size: .95rem;
+  font-weight: 600;
+  margin-bottom: .75rem;
+}
+
 .current-difficulty,
 .current-difficulty-mobile {
   font-weight: 700;
@@ -270,7 +293,6 @@ a:focus-visible, button:focus-visible, .board-card:focus-visible {
   font-size: .85rem;
 }
 
-/* ===== BOARD ===== */
 .board-wrapper {
   background: linear-gradient(155deg, var(--color-surface-light) 0%, var(--color-surface) 100%);
   border: 1px solid var(--color-border);
@@ -347,6 +369,8 @@ a:focus-visible, button:focus-visible, .board-card:focus-visible {
   display: block;
 }
 
+/* Animación de fallo (no-match): la carta debe seguir mostrando su frente
+   (rotateY 180deg) mientras se sacude, por eso el keyframe no vuelve a 0deg. */
 .board-card.mismatch .board-card-inner {
   animation: shake .4s ease;
 }
@@ -357,7 +381,12 @@ a:focus-visible, button:focus-visible, .board-card:focus-visible {
   75% { transform: rotateY(180deg) translateX(6px); }
 }
 
-/* ===== RESULT SCREEN ===== */
+/* ============================================================
+   7. PANTALLA DE RESULTADO
+   (el fondo del panel se define junto a .scoreboard-panel en la
+   sección 4, ya que comparten el mismo estilo de tarjeta)
+   ============================================================ */
+
 .result-icon {
   font-size: 3rem;
   color: var(--color-accent);
@@ -404,7 +433,20 @@ a:focus-visible, button:focus-visible, .board-card:focus-visible {
   font-size: .9rem;
 }
 
-/* ===== FOOTER ===== */
+/* ============================================================
+   8. TOAST (aviso de fallback cuando falla la API)
+   ============================================================ */
+
+.toast {
+  background-color: var(--color-surface-light);
+  color: var(--color-text);
+  border-left: 4px solid var(--color-accent);
+}
+
+/* ============================================================
+   9. FOOTER
+   ============================================================ */
+
 .footer {
   border-top: 1px solid var(--color-border);
 }
@@ -414,11 +456,12 @@ a:focus-visible, button:focus-visible, .board-card:focus-visible {
   font-size: .8rem;
 }
 
-/* ==========================================================================
-   RESPONSIVE
+/* ============================================================
+   10. MEDIA QUERIES
    Mobile 375px -> 3 columnas | Tablet 768px -> 4 columnas
    Desktop 1920px -> sidebar + grid según dificultad
-   ========================================================================== */
+   (agrupadas todas aquí, de menor a mayor ancho)
+   ============================================================ */
 
 /* Tablet (>= 576px) */
 @media (min-width: 576px) {
