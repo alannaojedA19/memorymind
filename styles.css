@@ -352,9 +352,9 @@ a:focus-visible, button:focus-visible, .board-card:focus-visible {
 }
 
 @keyframes shake {
-  0%, 100% { transform: rotateY(0deg) translateX(0); }
-  25% { transform: rotateY(0deg) translateX(-6px); }
-  75% { transform: rotateY(0deg) translateX(6px); }
+  0%, 100% { transform: rotateY(180deg) translateX(0); }
+  25% { transform: rotateY(180deg) translateX(-6px); }
+  75% { transform: rotateY(180deg) translateX(6px); }
 }
 
 /* ===== RESULT SCREEN ===== */

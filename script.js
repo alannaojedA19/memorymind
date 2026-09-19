@@ -28,6 +28,11 @@ let state = {
   usingImages: false
 };
 
+// Se incrementa cada vez que arranca una partida nueva o se vuelve al menú.
+// Cualquier callback async/timeout de una partida anterior compara contra este
+// valor antes de tocar el estado, para no "resucitar" una partida vieja.
+let activeGameToken = 0;
+
 // ---------- localStorage ----------
 
 function getScores() {
@@ -102,7 +107,10 @@ async function fetchUniqueDogImages(count) {
     const needed = count - urls.size;
     const batchSize = needed + 2; // margen por si la API repite alguna URL
 
-    const responses = await Promise.all(
+    // allSettled en vez de all: si UNA petición del lote falla (timeout puntual,
+    // hiccup de red), las demás del mismo lote se siguen aprovechando en vez de
+    // tirar todo el lote a la basura.
+    const results = await Promise.allSettled(
       Array.from({ length: batchSize }, () =>
         fetch(DOG_API_URL).then(res => {
           if (!res.ok) throw new Error(`Dog CEO API respondió con estado ${res.status}`);
@@ -111,8 +119,10 @@ async function fetchUniqueDogImages(count) {
       )
     );
 
-    responses.forEach(data => {
-      if (data.status === 'success' && data.message) urls.add(data.message);
+    results.forEach(result => {
+      if (result.status === 'fulfilled' && result.value.status === 'success' && result.value.message) {
+        urls.add(result.value.message);
+      }
     });
   }
 
@@ -149,7 +159,8 @@ function buildBoard(cardValues) {
     type: card.type,
     value: card.value,
     isFlipped: false,
-    isMatched: false
+    isMatched: false,
+    isMismatch: false
   }));
   return deck;
 }
@@ -161,12 +172,22 @@ function cardFrontMarkup(card) {
   return card.value;
 }
 
+function cardAriaLabel(card) {
+  if (card.isMatched) {
+    return card.type === 'image' ? 'Carta emparejada, imagen de perro' : `Carta emparejada, símbolo ${card.value}`;
+  }
+  if (card.isFlipped) {
+    return card.type === 'image' ? 'Carta volteada, imagen de perro' : `Carta volteada, símbolo ${card.value}`;
+  }
+  return 'Carta boca abajo';
+}
+
 function renderBoard() {
   const grid = document.getElementById('boardGrid');
   grid.dataset.difficulty = state.difficulty;
   grid.innerHTML = state.cards.map(card => `
-    <button type="button" class="board-card ${card.isFlipped ? 'flipped' : ''} ${card.isMatched ? 'matched' : ''}"
-      data-id="${card.id}" aria-label="Carta boca abajo">
+    <button type="button" class="board-card ${card.isFlipped ? 'flipped' : ''} ${card.isMatched ? 'matched' : ''} ${card.isMismatch ? 'mismatch' : ''}"
+      data-id="${card.id}" aria-label="${cardAriaLabel(card)}">
       <div class="board-card-inner">
         <div class="card-face card-back"><i class="bi bi-question-lg"></i></div>
         <div class="card-face card-front">${cardFrontMarkup(card)}</div>
@@ -184,6 +205,7 @@ function updateStatsBar() {
 // ---------- Lógica del juego ----------
 
 async function startGame(difficulty) {
+  const token = ++activeGameToken;
   clearInterval(state.timerId);
   const config = DIFFICULTIES[difficulty];
 
@@ -200,6 +222,14 @@ async function startGame(difficulty) {
     console.error('Fallback a emojis: no se pudieron obtener imágenes de Dog CEO API.', err);
     usingImages = false;
     cardValues = SYMBOL_POOL.slice(0, config.pairs).map(symbol => ({ type: 'emoji', value: symbol }));
+  }
+
+  // Si mientras esperábamos la API el usuario ya volvió al menú o arrancó otra
+  // partida (doble clic en "Jugar", navegación durante la carga), esta llamada
+  // quedó obsoleta: no debe pisar el estado de la partida vigente.
+  if (token !== activeGameToken) return;
+
+  if (!usingImages) {
     showToast('No se pudo conectar con la API de imágenes. Jugando con símbolos.');
   }
 
@@ -254,6 +284,7 @@ function handleCardClick(cardId) {
 
 function checkMatch() {
   const [first, second] = state.flipped;
+  const token = activeGameToken;
 
   if (first.value === second.value) {
     first.isMatched = true;
@@ -266,15 +297,25 @@ function checkMatch() {
 
     if (state.matchedCount === DIFFICULTIES[state.difficulty].pairs) {
       clearInterval(state.timerId);
-      setTimeout(() => endGame(true), 400);
+      setTimeout(() => {
+        if (token !== activeGameToken) return; // se salió al menú/otra partida antes de que cerrara
+        endGame(true);
+      }, 400);
     }
     return;
   }
 
+  first.isMismatch = true;
+  second.isMismatch = true;
   state.locked = true;
+  renderBoard();
+
   setTimeout(() => {
+    if (token !== activeGameToken) return; // partida vieja: no tocar el estado de la partida actual
     first.isFlipped = false;
     second.isFlipped = false;
+    first.isMismatch = false;
+    second.isMismatch = false;
     state.flipped = [];
     state.locked = false;
     renderBoard();
@@ -358,6 +399,7 @@ function renderSidebarScores() {
 // ---------- Navegación ----------
 
 function goToMenu() {
+  activeGameToken++; // invalida cualquier startGame/checkMatch pendiente de la partida anterior
   clearInterval(state.timerId);
   document.querySelectorAll('.difficulty-card').forEach(b => b.classList.remove('selected'));
   document.getElementById('playBtn').disabled = true;
