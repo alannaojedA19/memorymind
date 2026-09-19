@@ -4,6 +4,8 @@
  */
 
 const STORAGE_KEY = 'memorymind_scores';
+const DOG_API_URL = 'https://dog.ceo/api/breeds/image/random';
+const API_TIMEOUT_MS = 8000;
 
 const DIFFICULTIES = {
   easy: { label: 'Fácil', pairs: 6, time: 60 },
@@ -22,7 +24,8 @@ let state = {
   score: 0,
   timeLeft: 0,
   timerId: null,
-  locked: false
+  locked: false,
+  usingImages: false
 };
 
 // ---------- localStorage ----------
@@ -74,6 +77,52 @@ function showScreen(id) {
   document.getElementById('statsBar').classList.toggle('d-none', id !== 'gameScreen');
 }
 
+function showToast(message) {
+  const toastEl = document.getElementById('apiToast');
+  document.getElementById('apiToastBody').textContent = message;
+  new bootstrap.Toast(toastEl, { delay: 3500 }).show();
+}
+
+function withTimeout(promise, ms) {
+  return Promise.race([
+    promise,
+    new Promise((_, reject) => setTimeout(() => reject(new Error('Tiempo de espera agotado')), ms))
+  ]);
+}
+
+// ---------- Integración con Dog CEO API ----------
+
+async function fetchUniqueDogImages(count) {
+  const urls = new Set();
+  let rounds = 0;
+  const maxRounds = 5;
+
+  while (urls.size < count && rounds < maxRounds) {
+    rounds++;
+    const needed = count - urls.size;
+    const batchSize = needed + 2; // margen por si la API repite alguna URL
+
+    const responses = await Promise.all(
+      Array.from({ length: batchSize }, () =>
+        fetch(DOG_API_URL).then(res => {
+          if (!res.ok) throw new Error(`Dog CEO API respondió con estado ${res.status}`);
+          return res.json();
+        })
+      )
+    );
+
+    responses.forEach(data => {
+      if (data.status === 'success' && data.message) urls.add(data.message);
+    });
+  }
+
+  if (urls.size < count) {
+    throw new Error('No se consiguieron suficientes imágenes únicas desde la API.');
+  }
+
+  return [...urls].slice(0, count);
+}
+
 // ---------- Menú: selección de dificultad ----------
 
 function setupDifficultySelection() {
@@ -94,16 +143,22 @@ function setupDifficultySelection() {
 
 // ---------- Tablero: construcción ----------
 
-function buildBoard(difficulty) {
-  const config = DIFFICULTIES[difficulty];
-  const symbols = SYMBOL_POOL.slice(0, config.pairs);
-  const deck = shuffle([...symbols, ...symbols]).map((symbol, index) => ({
+function buildBoard(cardValues) {
+  const deck = shuffle([...cardValues, ...cardValues]).map((card, index) => ({
     id: index,
-    symbol,
+    type: card.type,
+    value: card.value,
     isFlipped: false,
     isMatched: false
   }));
   return deck;
+}
+
+function cardFrontMarkup(card) {
+  if (card.type === 'image') {
+    return `<img src="${card.value}" alt="Carta de memoria" class="card-image" loading="lazy">`;
+  }
+  return card.value;
 }
 
 function renderBoard() {
@@ -114,7 +169,7 @@ function renderBoard() {
       data-id="${card.id}" aria-label="Carta boca abajo">
       <div class="board-card-inner">
         <div class="card-face card-back"><i class="bi bi-question-lg"></i></div>
-        <div class="card-face card-front">${card.symbol}</div>
+        <div class="card-face card-front">${cardFrontMarkup(card)}</div>
       </div>
     </button>
   `).join('');
@@ -128,24 +183,42 @@ function updateStatsBar() {
 
 // ---------- Lógica del juego ----------
 
-function startGame(difficulty) {
+async function startGame(difficulty) {
   clearInterval(state.timerId);
   const config = DIFFICULTIES[difficulty];
 
+  showScreen('loadingScreen');
+  document.getElementById('loadingText').textContent = 'Buscando imágenes de perritos en Dog CEO API...';
+
+  let cardValues;
+  let usingImages = true;
+
+  try {
+    const imageUrls = await withTimeout(fetchUniqueDogImages(config.pairs), API_TIMEOUT_MS);
+    cardValues = imageUrls.map(url => ({ type: 'image', value: url }));
+  } catch (err) {
+    console.error('Fallback a emojis: no se pudieron obtener imágenes de Dog CEO API.', err);
+    usingImages = false;
+    cardValues = SYMBOL_POOL.slice(0, config.pairs).map(symbol => ({ type: 'emoji', value: symbol }));
+    showToast('No se pudo conectar con la API de imágenes. Jugando con símbolos.');
+  }
+
   state = {
     difficulty,
-    cards: buildBoard(difficulty),
+    cards: buildBoard(cardValues),
     flipped: [],
     matchedCount: 0,
     moves: 0,
     score: 0,
     timeLeft: config.time,
     timerId: null,
-    locked: false
+    locked: false,
+    usingImages
   };
 
   document.getElementById('currentDifficultyLabel').textContent = config.label;
   document.getElementById('currentDifficultyLabelMobile').textContent = config.label;
+  document.getElementById('offlineModePill').classList.toggle('d-none', usingImages);
 
   showScreen('gameScreen');
   renderBoard();
@@ -182,7 +255,7 @@ function handleCardClick(cardId) {
 function checkMatch() {
   const [first, second] = state.flipped;
 
-  if (first.symbol === second.symbol) {
+  if (first.value === second.value) {
     first.isMatched = true;
     second.isMatched = true;
     state.matchedCount++;
